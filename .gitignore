@@ -1,0 +1,12 @@
+# Arquivos compilados
+*.exe
+*.ilk
+*.o
+*.obj
+*.pdb
+
+# Visual Studio/VS Code
+.vscode/
+*.suo
+*.user
+*.sln.docstates
