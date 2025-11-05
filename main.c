@@ -58,7 +58,22 @@ int main(){
             //receber um codigo ou descrição/nome e buscar nas listas estoque//
             break;
             case 3:
-            //imprimir lista carrinho//
+                //imprimirCarrinho(//carrinho//);
+                int subopcao=-1;
+                printf("Gostaria de:\nAdicionar item ao carrinho-1\nRemover item do carrinho-2\nVoltar ao menu principal-3\n");
+                scanf("%d",&subopcao);
+                switch(subopcao){
+                    case 1:
+                    //adicionar//
+                    break;
+                    case 2:
+                    //remover//
+                    break;
+                    case 3:
+                    //voltar//
+                    break;
+                }
+
             //buscar e reduzir a quantidade desejada de um produto ou buscar e aumentar/se nao encontrar adicionar à lista carrinho//
             break;
             case 4:
@@ -114,5 +129,5 @@ void desalocarLista(no **lista) {
         free(atual);
         atual = prox;
     }
-    *lista = NULL; //sim ou nao
+    *lista = NULL;
 }
