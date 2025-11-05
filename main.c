@@ -114,5 +114,5 @@ void desalocarLista(no **lista) {
         free(atual);
         atual = prox;
     }
-    *lista = NULL;
+    *lista = NULL; //oi
 }
