@@ -1,0 +1,11 @@
+2001 Dipirona500mg 12.90
+2002 Ibuprofeno400mg 18.50
+2003 Paracetamol750mg 14.20
+2101 AAS100mg 9.70
+2201 Loratadina10mg 16.30
+2301 Amoxicilina500mg 29.90
+3001 VitaminaC1g 22.00
+3201 PolivitamínicoAdulto 34.90
+4001 TesteCovid(5un) 39.90
+5001 SoroFisiologico500ml 7.50
+6001 TermometroDigital 29.00
