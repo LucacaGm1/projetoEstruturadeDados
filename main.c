@@ -39,10 +39,23 @@ typedef struct carrinho{
     float total;
 }carrinho;
 
-no *alocano(int k);
-void insereInicio(int k, no **lista);
-void imprimirLista(no *lista);
-void desalocar(void **p);
+produto* criarProduto(int codigo, const char* descricao, float preco);
+void inserirProduto(produto** lista, produto* novo);
+void imprimirProdutos(produto* lista);
+void desalocarProdutos(produto** lista);
+
+itemEstoque* criarItemEstoque(int codigo_produto, int quantidade);
+void inserirItemEstoque(itemEstoque** lista, itemEstoque* novo);
+void imprimirEstoque(itemEstoque* lista);
+void desalocarEstoque(itemEstoque** lista);
+
+itemCarrinho* criarItemCarrinho(int codigo, int qtd, float preco_unit);
+void inserirItemCarrinho(carrinho* c, itemCarrinho* novo);
+void removerItemCarrinho(carrinho* c, int codigo);
+void imprimirCarrinho(carrinho* c);
+void desalocarCarrinho(carrinho* c);
+
+void desalocarPonteiro(void **p);
 
 int main(){
     FILE *CARRINHOS, *ESTOQUES, *PRODUTOS, *FILIAIS;
@@ -93,41 +106,7 @@ int main(){
 
 //--------------------------------------------------------------------------------//
 
-no *alocano(int k){
-    no *novono=malloc(sizeof(no));
-    novono->chave=k;
-    if(novono)
-        return novono;
-    printf("Erro na alocação");
-    return NULL;
-}
-void insereInicio(int k, no **lista){
-    no *noinicio=alocano(k);
-    noinicio->prox=*lista;
-    *lista=noinicio;
-}
-void imprimirLista(no *lista){
-    if(lista){
-        while(lista){
-        printf("%d", lista->chave);
-        lista=lista->prox;
-        }
-    }
-    else
-        printf("Lista vazia!");
-}
-
-void desalocar(void **p){
+void desalocarPonteiro(void **p){
     free(*p);
     *p=NULL;
-}
-
-void desalocarLista(no **lista) {
-    no *atual = *lista;
-    while (atual != NULL) {
-        no *prox = atual->prox;
-        free(atual);
-        atual = prox;
-    }
-    *lista = NULL;
 }
