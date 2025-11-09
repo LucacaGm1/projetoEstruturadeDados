@@ -106,6 +106,39 @@ int main(){
 
 //--------------------------------------------------------------------------------//
 
+produto* criarProduto(int codigo, const char* descricao, float preco){
+    produto* novo=(produto*)malloc(sizeof(produto));
+    novo->codigo=codigo;
+    strncpy(novo->descricao, descricao, 64);
+    novo->preco=preco;
+    novo->prox=NULL;
+    return novo;
+}
+
+void inserirProduto(produto** lista, produto* novo){
+    novo->prox=*lista;
+    *lista=novo;
+}
+
+void imprimirProdutos(produto* lista){
+    produto* atual=lista;
+    while(atual!=NULL){
+        printf("Codigo: %d\nDescricao: %s\nPreco: %.2f\n\n", atual->codigo, atual->descricao, atual->preco);
+        atual=atual->prox;
+    }
+}
+
+void desalocarProdutos(produto** lista){
+    produto* atual=*lista;
+    produto* temp;
+    while(atual!=NULL){
+        temp=atual;
+        atual=atual->prox;
+        free(temp);
+    }
+    *lista=NULL;
+}
+
 void desalocarPonteiro(void **p){
     free(*p);
     *p=NULL;
