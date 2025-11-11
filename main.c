@@ -50,27 +50,66 @@ void removerItemCarrinho(carrinho* c, int codigo);//
 void imprimirCarrinho(carrinho* c);//
 void desalocarCarrinho(carrinho* c);//
 
+filial* criarFilial(int id, const char* nome);//
+void inserirFilial(filial** lista, filial* nova);//
+void imprimirFiliais(filial* lista);//
+void desalocarFiliais(filial** lista);//
+
 void desalocarPonteiro(void **p);//
 
+void carregarDados(produto** lista_produtos, filial** lista_filiais);//
+
+void buscarItemEstoquePorCodigo(filial* lista_filiais, int codigo_produto, int quantidade_desejada);//
+void buscarItemEstoquePorDescricao(filial* lista_filiais, produto* lista_produtos, const char* descricao, int quantidade_desejada);//
+
 int main(){
-    FILE *CARRINHOS, *ESTOQUES, *PRODUTOS, *FILIAIS;
+    carrinho* carrinho_cliente=(carrinho*)malloc(sizeof(carrinho));
+    carrinho_cliente->itens=NULL;
+    carrinho_cliente->total=0.0;
+
+    filial* filiais=NULL;
+
+    produto* produtos=NULL;
+
     int opcao=-1;
     while (opcao!=0){
         printf("O que gostaria de fazer?\nCarregar dados-1\nPesquisar por codigo ou descricao-2\nListar itens no carrinho/Remover/Adicionar-3\nVerificar disponibilidade-4\nEscolher filial para finalizar a compra-5\nGerar relatorios-6\nSair do programa gerando relatorio e desalocando memoria-0\n");
         scanf("%d",&opcao);
         switch(opcao){
             case 1:
-            //arquivos//
+                carregarDados(&produtos, &filiais);
             break;
             case 2:
-            //receber um codigo ou descrição/nome e buscar nas listas estoque//
-            break;
-            case 3:
-                //imprimirCarrinho(//carrinho//);
                 int subopcao=-1;
-                printf("Gostaria de:\nAdicionar item ao carrinho-1\nRemover item do carrinho-2\nVoltar ao menu principal-3\n");
+                printf("Gostaria de buscar por codigo-1 ou descricao-2?\n");
                 scanf("%d",&subopcao);
                 switch(subopcao){
+                    case 1:
+                        int codigo_produto;
+                        printf("Digite o codigo do produto:\n");
+                        scanf("%d",&codigo_produto);
+                        int quantidade_desejada;
+                        printf("Digite a quantidade desejada:\n");
+                        scanf("%d",&quantidade_desejada);
+                        buscarItemEstoquePorCodigo(filiais, codigo_produto, quantidade_desejada);
+                    break;
+                    case 2:
+                        char descricao_produto[64];
+                        printf("Digite a descricao do produto:\n");
+                        scanf("%s",descricao_produto);
+                        int quantidade_desejada2;
+                        printf("Digite a quantidade desejada:\n");
+                        scanf("%d",&quantidade_desejada2);
+                        buscarItemEstoquePorDescricao(filiais, produtos, descricao_produto, quantidade_desejada2);
+                    break;
+                }
+            break;
+            case 3:
+                imprimirCarrinho(carrinho_cliente);
+                int subopcao2=-1;
+                printf("\nGostaria de:\nAdicionar item ao carrinho-1\nRemover item do carrinho-2\nVoltar ao menu principal-3\n");
+                scanf("%d",&subopcao2);
+                switch(subopcao2){
                     case 1:
                     //adicionar//
                     break;
@@ -94,8 +133,10 @@ int main(){
             //arquivos//
             break;
         }
-        //desalocar, arquivos(relatórios)//
+        //desalocar carrinho//
     }
+    //desalocar tudo e gerar relatorio final//
+    printf("saindo...\n");
     return 0;
 }
 
@@ -253,7 +294,160 @@ void imprimirCarrinho(carrinho* c){
     printf("Total do carrinho: %.2f\n", c->total);
 }
 
+filial* criarFilial(int id, const char* nome){
+    filial* nova=(filial*)malloc(sizeof(filial));
+    nova->id_filial=id;
+    strncpy(nova->nome, nome, 40);
+    nova->estoque=NULL;
+    nova->prox=NULL;
+    return nova;
+
+}
+
+void inserirFilial(filial** lista, filial* nova){
+    nova->prox=*lista;
+    *lista=nova;
+}
+
+void imprimirFiliais(filial* lista){
+    filial* atual=lista;
+    while(atual!=NULL){
+        printf("ID da filial: %d\nNome: %s\n", atual->id_filial, atual->nome);
+        imprimirEstoque(atual->estoque);
+        atual=atual->prox;
+    }
+}
+
+void desalocarFiliais(filial** lista){
+    filial* atual=*lista;
+    filial* temp;
+    while(atual!=NULL){
+        temp=atual;
+        atual=atual->prox;
+        desalocarEstoque(&temp->estoque);
+        free(temp);
+    }
+    *lista=NULL;
+}
+
 void desalocarPonteiro(void **p){
     free(*p);
     *p=NULL;
+}
+
+void buscarItemEstoquePorCodigo(filial* lista_filiais, int codigo_produto, int quantidade_desejada) {
+    int encontrado = 0;
+    filial* atual = lista_filiais;
+
+    while (atual != NULL) {
+        itemEstoque* item = atual->estoque;
+        while (item != NULL) {
+            if (item->codigo_produto == codigo_produto && item->quantidade >= quantidade_desejada) {
+                printf("Produto disponivel na filial %s:\n", atual->nome);
+                printf("Codigo: %d | Quantidade: %d\n", item->codigo_produto, item->quantidade);
+                encontrado =1;
+            }
+            item = item->prox;
+        }
+        atual = atual->prox;
+    }
+
+    if (encontrado==0) {
+        printf("Produto nao disponivel na quantidade desejada em nenhuma filial.\n");
+    }
+}
+
+void buscarItemEstoquePorDescricao(filial* lista_filiais, produto* lista_produtos, const char* descricao, int quantidade_desejada) {
+    int codigo_produto = -1;
+    float preco = 0.0;
+
+    // 1. Buscar o código do produto pela descrição
+    produto* p = lista_produtos;
+    while (p != NULL) {
+        if (strcmp(p->descricao, descricao) == 0) {
+            codigo_produto = p->codigo;
+            preco = p->preco;
+            break;
+        }
+        p = p->prox;
+    }
+
+    if (codigo_produto == -1) {
+        printf("Produto com descricao '%s' nao encontrado.\n", descricao);
+        return;
+    }
+
+    // 2. Procurar o produto nas filiais
+    int encontrado = 0;
+    filial* f = lista_filiais;
+    while (f != NULL) {
+        itemEstoque* item = f->estoque;
+        while (item != NULL) {
+            if (item->codigo_produto == codigo_produto && item->quantidade >= quantidade_desejada) {
+                printf("Produto disponivel na filial %s:\n", f->nome);
+                printf("Codigo: %d | Descricao: %s | Preco: %.2f | Quantidade: %d\n",
+                       codigo_produto, descricao, preco, item->quantidade);
+                encontrado = 1;
+            }
+            item = item->prox;
+        }
+        f = f->prox;
+    }
+
+    if (!encontrado) {
+        printf("Produto '%s' nao disponivel na quantidade desejada em nenhuma filial.\n", descricao);
+    }
+}
+
+
+
+void carregarDados(produto** lista_produtos, filial** lista_filiais) {
+    FILE *PRODUTOS = fopen("produtos_v2.txt", "r");
+    FILE *FILIAIS = fopen("filiais_v2.txt", "r");
+    FILE *ESTOQUES = fopen("estoques_v2.txt", "r");
+
+    if (!PRODUTOS || !FILIAIS || !ESTOQUES) {
+        printf("Erro ao abrir um ou mais arquivos.\n");
+        return;
+    }
+
+    // Carregar produtos
+    int codigo;
+    char descricao[64];
+    float preco;
+    while (fscanf(PRODUTOS, "%d %s %f", &codigo, descricao, &preco) == 3) {
+        produto* novo = criarProduto(codigo, descricao, preco);
+        inserirProduto(lista_produtos, novo);
+    }
+
+    // Carregar filiais
+    char linha[100];
+    int id_filial;
+    char nome[40];
+
+    while (fgets(linha, sizeof(linha), FILIAIS) != NULL) {
+        if (sscanf(linha, "%d %[^\n]", &id_filial, nome) == 2) {
+            filial* nova = criarFilial(id_filial, nome);
+            inserirFilial(lista_filiais, nova);
+        }
+    }
+
+    // Carregar estoques
+    int filial_id, produto_id, quantidade;
+    while (fscanf(ESTOQUES, "%d %d %d", &filial_id, &produto_id, &quantidade) == 3) {
+        filial* f = *lista_filiais;
+        while (f && f->id_filial != filial_id) {
+            f = f->prox;
+        }
+        if (f) {
+            itemEstoque* novo_item = criarItemEstoque(produto_id, quantidade);
+            inserirItemEstoque(&(f->estoque), novo_item);
+        }
+    }
+
+    fclose(PRODUTOS);
+    fclose(FILIAIS);
+    fclose(ESTOQUES);
+
+    printf("Dados carregados com sucesso!\n");
 }
