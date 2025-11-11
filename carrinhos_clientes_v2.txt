@@ -1,0 +1,24 @@
+# Comandos de simulação (veja gramática no enunciado)
+# Carrinho 1 — Deve ser atendido por 101 e 202 (confira estoques)
+NOVO_CARRINHO 1
+ADD 2001 2
+ADD 5001 4
+ADD 2201 5
+VERIFICAR_ATENDIMENTO
+FINALIZAR 101
+FIM
+
+# Carrinho 2 — Falta em todas as filiais (força diagnóstico)
+NOVO_CARRINHO 2
+ADD 2301 10
+ADD 4001 6
+VERIFICAR_ATENDIMENTO
+FIM
+
+# Carrinho 3 — Múltiplas filiais aptas
+NOVO_CARRINHO 3
+ADD 2002 3
+ADD 2003 2
+ADD 5001 1
+VERIFICAR_ATENDIMENTO
+FIM

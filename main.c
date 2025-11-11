@@ -39,23 +39,23 @@ typedef struct carrinho{
     float total;
 }carrinho;
 
-produto* criarProduto(int codigo, const char* descricao, float preco);
-void inserirProduto(produto** lista, produto* novo);
-void imprimirProdutos(produto* lista);
-void desalocarProdutos(produto** lista);
+produto* criarProduto(int codigo, const char* descricao, float preco);//
+void inserirProduto(produto** lista, produto* novo);//
+void imprimirProdutos(produto* lista);//
+void desalocarProdutos(produto** lista);//
 
-itemEstoque* criarItemEstoque(int codigo_produto, int quantidade);
-void inserirItemEstoque(itemEstoque** lista, itemEstoque* novo);
-void imprimirEstoque(itemEstoque* lista);
-void desalocarEstoque(itemEstoque** lista);
+itemEstoque* criarItemEstoque(int codigo_produto, int quantidade);//
+void inserirItemEstoque(itemEstoque** lista, itemEstoque* novo);//
+void imprimirEstoque(itemEstoque* lista);//
+void desalocarEstoque(itemEstoque** lista);//
 
-itemCarrinho* criarItemCarrinho(int codigo, int qtd, float preco_unit);
-void inserirItemCarrinho(carrinho* c, itemCarrinho* novo);
-void removerItemCarrinho(carrinho* c, int codigo);
-void imprimirCarrinho(carrinho* c);
-void desalocarCarrinho(carrinho* c);
+itemCarrinho* criarItemCarrinho(int codigo, int qtd, float preco_unit);//
+void inserirItemCarrinho(carrinho* c, itemCarrinho* novo);//
+void removerItemCarrinho(carrinho* c, int codigo);//
+void imprimirCarrinho(carrinho* c);//
+void desalocarCarrinho(carrinho* c);//
 
-void desalocarPonteiro(void **p);
+void desalocarPonteiro(void **p);//
 
 int main(){
     FILE *CARRINHOS, *ESTOQUES, *PRODUTOS, *FILIAIS;
@@ -137,6 +137,125 @@ void desalocarProdutos(produto** lista){
         free(temp);
     }
     *lista=NULL;
+}
+
+itemEstoque* criarItemEstoque(int codigo_produto, int quantidade) {
+    itemEstoque* novo = (itemEstoque*)malloc(sizeof(itemEstoque));
+    if (!novo) return NULL;
+
+    novo->codigo_produto = codigo_produto;
+    novo->quantidade = quantidade;
+    novo->prox = NULL;
+
+    return novo;
+}
+
+void inserirItemEstoque(itemEstoque** lista, itemEstoque* novo) {
+    if (!lista || !novo) return;
+
+    // Verifica se o produto já existe no estoque
+    itemEstoque* atual = *lista;
+    while (atual) {
+        if (atual->codigo_produto == novo->codigo_produto) {
+            atual->quantidade += novo->quantidade;
+            free(novo); // já existe, só atualiza a quantidade
+            return;
+        }
+        atual = atual->prox;
+    }
+
+    // Insere no início da lista
+    novo->prox = *lista;
+    *lista = novo;
+}
+
+void imprimirEstoque(itemEstoque* lista) {
+    itemEstoque* atual = lista;
+    printf("Estoque:\n");
+    while (atual) {
+        printf("Produto %d - Quantidade: %d\n", atual->codigo_produto, atual->quantidade);
+        atual = atual->prox;
+    }
+}
+
+void desalocarEstoque(itemEstoque** lista) {
+    itemEstoque* atual = *lista;
+    while (atual) {
+        itemEstoque* temp = atual;
+        atual = atual->prox;
+        free(temp);
+    }
+    *lista = NULL;
+}
+
+itemCarrinho* criarItemCarrinho(int codigo, int qtd, float preco_unit) {
+    itemCarrinho* novo = (itemCarrinho*)malloc(sizeof(itemCarrinho));
+    if (!novo) return NULL;
+
+    novo->codigo_produto = codigo;
+    novo->qtd = qtd;
+    novo->preco_unit = preco_unit;
+    novo->prox = NULL;
+
+    return novo;
+}
+
+void inserirItemCarrinho(carrinho* c, itemCarrinho* novo) {
+    if (!c || !novo) return;
+    itemCarrinho* atual = c->itens;
+    while (atual) {
+        if (atual->codigo_produto == novo->codigo_produto) {
+            atual->qtd += novo->qtd;
+            c->total += novo->qtd * atual->preco_unit;
+            free(novo);
+            return;
+        }
+        atual = atual->prox;
+    }
+    novo->prox = c->itens;
+    c->itens = novo;
+    c->total += novo->qtd * novo->preco_unit;
+}
+
+void removerItemCarrinho(carrinho* c, int codigo) {
+    if (!c || !c->itens) return;
+    itemCarrinho *atual = c->itens, *anterior = NULL;
+    while (atual) {
+        if (atual->codigo_produto == codigo) {
+            if (anterior) {
+                anterior->prox = atual->prox;
+            } else {
+                c->itens = atual->prox;
+            }
+            c->total -= atual->qtd * atual->preco_unit;
+            free(atual);
+            return;
+        }
+        anterior = atual;
+        atual = atual->prox;
+    }
+}
+
+void desalocarCarrinho(carrinho* c) {
+    if (!c) return;
+    itemCarrinho* atual = c->itens;
+    while (atual) {
+        itemCarrinho* temp = atual;
+        atual = atual->prox;
+        free(temp);
+    }
+    c->itens = NULL;
+    c->total = 0.0;
+}
+
+void imprimirCarrinho(carrinho* c){
+    itemCarrinho* atual=c->itens;
+    printf("Itens no carrinho:\n");
+    while(atual!=NULL){
+        printf("Codigo do produto: %d\nQuantidade: %d\nPreco unitario: %.2f\n\n", atual->codigo_produto, atual->qtd, atual->preco_unit);
+        atual=atual->prox;
+    }
+    printf("Total do carrinho: %.2f\n", c->total);
 }
 
 void desalocarPonteiro(void **p){
