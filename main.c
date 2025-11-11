@@ -2,11 +2,6 @@
 #include<stdlib.h>
 #include<string.h>
 
-typedef struct no{
-    int chave;
-    struct no *prox;
-}no;
-
 typedef struct produto{
     int codigo;
     char descricao[64];
