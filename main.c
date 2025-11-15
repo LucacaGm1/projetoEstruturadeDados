@@ -32,8 +32,10 @@ typedef struct itemCarrinho{
 typedef struct carrinho{
     itemCarrinho *itens;
     float total;
+    struct carrinho *prox;
 }carrinho;
 
+//--------------------------------------------------------------------------------//
 produto* criarProduto(int codigo, const char* descricao, float preco);//
 void inserirProduto(produto** lista, produto* novo);//
 void imprimirProdutos(produto* lista);//
@@ -46,26 +48,31 @@ void desalocarEstoque(itemEstoque** lista);//
 
 itemCarrinho* criarItemCarrinho(int codigo, int qtd, float preco_unit);//
 void inserirItemCarrinho(carrinho* c, itemCarrinho* novo);//
-void removerItemCarrinho(carrinho* c, int codigo);//
-void imprimirCarrinho(carrinho* c);//
-void desalocarCarrinho(carrinho* c);//
+void removerItemCarrinho(carrinho* c, int codigo, int quantidade_remover);//
 
 filial* criarFilial(int id, const char* nome);//
 void inserirFilial(filial** lista, filial* nova);//
 void imprimirFiliais(filial* lista);//
 void desalocarFiliais(filial** lista);//
 
+carrinho *criarCarrinho(itemCarrinho *itens);//
+void inserirCarrinho(carrinho **lista, carrinho *novo);//
+void imprimirCarrinhos(carrinho *lista);//
+void imprimirCarrinho(carrinho* c);//
+void desalocarCarrinho(carrinho* c);//
+void imprimirListaCarrinhos(carrinho* lista);//
+
+int verificarDisponibilidade(carrinho* c, filial* f);//
+
 void desalocarPonteiro(void **p);//
 
-void carregarDados(produto** lista_produtos, filial** lista_filiais);//
+void carregarDados(produto** lista_produtos, filial** lista_filiais, carrinho **carrinho_cliente);//
 
 void buscarItemEstoquePorCodigo(filial* lista_filiais, int codigo_produto, int quantidade_desejada);//
 void buscarItemEstoquePorDescricao(filial* lista_filiais, produto* lista_produtos, const char* descricao, int quantidade_desejada);//
 
 int main(){
-    carrinho* carrinho_cliente=(carrinho*)malloc(sizeof(carrinho));
-    carrinho_cliente->itens=NULL;
-    carrinho_cliente->total=0.0;
+    carrinho* carrinhos_clientes=NULL;
 
     filial* filiais=NULL;
 
@@ -77,7 +84,7 @@ int main(){
         scanf("%d",&opcao);
         switch(opcao){
             case 1:
-                carregarDados(&produtos, &filiais);
+                carregarDados(&produtos, &filiais, &carrinhos_clientes);
             break;
             case 2:
                 int subopcao=-1;
@@ -105,23 +112,58 @@ int main(){
                 }
             break;
             case 3:
-                imprimirCarrinho(carrinho_cliente);
+                if (carrinhos_clientes==NULL || produtos==NULL || carrinhos_clientes->itens==NULL){
+                    printf("Carrinho vazio ou produtos nao carregados. Tente novamente.\n");
+                    break;
+                }
+                imprimirCarrinho(carrinhos_clientes);
                 int subopcao2=-1;
                 printf("\nGostaria de:\nAdicionar item ao carrinho-1\nRemover item do carrinho-2\nVoltar ao menu principal-3\n");
                 scanf("%d",&subopcao2);
                 switch(subopcao2){
                     case 1:
-                    //adicionar//
+                        int codigo_add=0, quantidade_add=0, achou=0;
+                        float preco_add=0.0;
+                        produto *paux=produtos;
+                        printf("Qual item gostaria de adicionar?(codigo)\n");
+                        scanf("%d",&codigo_add);
+                        while (paux!=NULL){
+                            if(paux->codigo==codigo_add){
+                                preco_add=paux->preco;
+                                achou=1;
+                                break;
+                            }
+                            paux=paux->prox;
+                        }
+                        if(achou==0){
+                            printf("Produto nao encontrado. Tente novamente.\n");
+                                break;
+                        }
+                        printf("Qual a quantidade desejada?\n");
+                        scanf("%d",&quantidade_add);
+                        inserirItemCarrinho(carrinhos_clientes, criarItemCarrinho(codigo_add, quantidade_add, preco_add));
                     break;
                     case 2:
-                    //remover//
-                    break;
-                    case 3:
-                    //voltar//
+                        int codigo_rem=0, quantidade_rem=0, achou1=0;
+                        printf("Qual item gostaria de remover?(codigo)\n");
+                        scanf("%d",&codigo_rem);
+                        produto *paux1=produtos;
+                        while (paux1!=NULL){
+                            if(paux1->codigo==codigo_rem){
+                                achou1=1;
+                                break;
+                            }
+                            paux1=paux1->prox;
+                        }
+                        if(achou1==0){
+                            printf("Produto nao encontrado. Tente novamente.\n");
+                            break;
+                        }
+                        printf("Qual a quantidade desejada?\n");
+                        scanf("%d",&quantidade_rem);
+                        removerItemCarrinho(carrinhos_clientes, codigo_rem, quantidade_rem);
                     break;
                 }
-
-            //buscar e reduzir a quantidade desejada de um produto ou buscar e aumentar/se nao encontrar adicionar à lista carrinho//
             break;
             case 4:
             //buscar cada item do carrinho em cada uma das filiais e dizer quais têm disponibilidade de todos e quais não têm e o que falta, caso não tenha algum item//
@@ -136,6 +178,10 @@ int main(){
         //desalocar carrinho//
     }
     //desalocar tudo e gerar relatorio final//
+    imprimirFiliais(filiais);
+    imprimirCarrinho(carrinhos_clientes);
+    imprimirProdutos(produtos);
+    imprimirListaCarrinhos(carrinhos_clientes);
     printf("saindo...\n");
     return 0;
 }
@@ -227,7 +273,6 @@ void desalocarEstoque(itemEstoque** lista) {
 itemCarrinho* criarItemCarrinho(int codigo, int qtd, float preco_unit) {
     itemCarrinho* novo = (itemCarrinho*)malloc(sizeof(itemCarrinho));
     if (!novo) return NULL;
-
     novo->codigo_produto = codigo;
     novo->qtd = qtd;
     novo->preco_unit = preco_unit;
@@ -253,18 +298,26 @@ void inserirItemCarrinho(carrinho* c, itemCarrinho* novo) {
     c->total += novo->qtd * novo->preco_unit;
 }
 
-void removerItemCarrinho(carrinho* c, int codigo) {
-    if (!c || !c->itens) return;
+void removerItemCarrinho(carrinho* c, int codigo, int quantidade_remover) {
+    if (!c || !c->itens || quantidade_remover <= 0) return;
+
     itemCarrinho *atual = c->itens, *anterior = NULL;
     while (atual) {
         if (atual->codigo_produto == codigo) {
-            if (anterior) {
-                anterior->prox = atual->prox;
+            if (quantidade_remover >= atual->qtd) {
+                // Remove o item inteiro
+                if (anterior) {
+                    anterior->prox = atual->prox;
+                } else {
+                    c->itens = atual->prox;
+                }
+                c->total -= atual->qtd * atual->preco_unit;
+                free(atual);
             } else {
-                c->itens = atual->prox;
+                // Remove apenas parte da quantidade
+                atual->qtd -= quantidade_remover;
+                c->total -= quantidade_remover * atual->preco_unit;
             }
-            c->total -= atual->qtd * atual->preco_unit;
-            free(atual);
             return;
         }
         anterior = atual;
@@ -301,7 +354,6 @@ filial* criarFilial(int id, const char* nome){
     nova->estoque=NULL;
     nova->prox=NULL;
     return nova;
-
 }
 
 void inserirFilial(filial** lista, filial* nova){
@@ -329,6 +381,74 @@ void desalocarFiliais(filial** lista){
     }
     *lista=NULL;
 }
+
+carrinho* criarCarrinho(itemCarrinho* itens) {
+    carrinho* novo = (carrinho*)malloc(sizeof(carrinho));
+    if (!novo) {
+        printf("Erro na alocacao da lista de carrinhos\n");
+        return NULL;
+    }
+
+    novo->itens = itens;
+    novo->total = 0.0;
+    novo->prox = NULL;
+
+    itemCarrinho* atual = itens;
+    while (atual) {
+        novo->total += atual->qtd * atual->preco_unit;
+        atual = atual->prox;
+    }
+
+    return novo;
+}
+
+void inserirCarrinho(carrinho **lista, carrinho *novo){
+    if (*lista == NULL) {
+        // Primeiro carrinho: aponta para si mesmo
+        novo->prox = novo;
+        *lista = novo;
+    }
+    else{
+    novo->prox = (*lista)->prox;
+    (*lista)->prox = novo;
+    *lista = novo;
+    }
+}
+
+
+void imprimirListaCarrinhos(carrinho* lista) {
+    if (!lista) {
+        printf("Nenhum carrinho registrado.\n");
+        return;
+    }
+
+    int contador = 1;
+    carrinho* atual = lista->prox; // começa pelo primeiro carrinho
+
+    do {
+        printf("\nCarrinho %d:\n", contador++);
+        printf("Total: R$ %.2f\n", atual->total);
+
+        itemCarrinho* item = atual->itens;
+        if (!item) {
+            printf("  (Carrinho vazio)\n");
+        } else {
+            while (item) {
+                printf("  Produto: %d | Quantidade: %d | Preço unitário: R$ %.2f\n",
+                       item->codigo_produto, item->qtd, item->preco_unit);
+                item = item->prox;
+            }
+        }
+
+        atual = atual->prox;
+    } while (atual != lista->prox); // volta ao primeiro carrinho
+}
+
+
+
+
+
+
 
 void desalocarPonteiro(void **p){
     free(*p);
@@ -401,12 +521,13 @@ void buscarItemEstoquePorDescricao(filial* lista_filiais, produto* lista_produto
 
 
 
-void carregarDados(produto** lista_produtos, filial** lista_filiais) {
+void carregarDados(produto** lista_produtos, filial** lista_filiais, carrinho **carrinho_cliente) {
     FILE *PRODUTOS = fopen("produtos_v2.txt", "r");
     FILE *FILIAIS = fopen("filiais_v2.txt", "r");
     FILE *ESTOQUES = fopen("estoques_v2.txt", "r");
+    FILE *CARRINHO = fopen("carrinhos_clientes_v2.txt", "r");
 
-    if (!PRODUTOS || !FILIAIS || !ESTOQUES) {
+    if (!PRODUTOS || !FILIAIS || !ESTOQUES || !CARRINHO) {
         printf("Erro ao abrir um ou mais arquivos.\n");
         return;
     }
@@ -445,9 +566,50 @@ void carregarDados(produto** lista_produtos, filial** lista_filiais) {
         }
     }
 
+    // Carregar carrinho
+    char linha_c[128];
+    int id_carrinho = -1;
+    carrinho* atual = NULL;
+
+    while (fgets(linha_c, sizeof(linha_c), CARRINHO) != NULL) {
+        if (linha_c[0] == '#' || strlen(linha_c) < 2) continue;
+
+        char comando[32];
+        int cod_produto, qtd;
+        sscanf(linha_c, "%s", comando);
+
+        if (strcmp(comando, "NOVO_CARRINHO") == 0) {
+            sscanf(linha_c, "%*s %d", &id_carrinho);
+            atual = criarCarrinho(NULL); // cria novo carrinho
+            if (*carrinho_cliente == NULL){
+                atual->prox = atual;
+                *carrinho_cliente = atual;
+            }
+            else{
+            atual->prox = (*carrinho_cliente)->prox;
+            (*carrinho_cliente)->prox = atual; // insere no final da lista
+            *carrinho_cliente = atual;
+            }
+
+        } else if (strcmp(comando, "ADD") == 0) {
+            sscanf(linha_c, "%*s %d %d", &cod_produto, &qtd);
+            produto* p = *lista_produtos;
+            while (p && p->codigo != cod_produto) p = p->prox;
+            if (p) {
+                itemCarrinho* novo = criarItemCarrinho(cod_produto, qtd, p->preco);
+                inserirItemCarrinho(atual, novo);
+            }
+        } else if (strcmp(comando, "FIM") == 0) {
+            atual = NULL;
+            id_carrinho = -1;
+        }
+    }
+
     fclose(PRODUTOS);
     fclose(FILIAIS);
     fclose(ESTOQUES);
+    fclose(CARRINHO);
 
     printf("Dados carregados com sucesso!\n");
 }
+
