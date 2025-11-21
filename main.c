@@ -217,6 +217,10 @@ int main(){
 
 produto* criarProduto(int codigo, const char* descricao, float preco){
     produto* novo=(produto*)malloc(sizeof(produto));
+    if(!novo){
+    printf("Falha na alocacao de memoria para novo produto.\n");
+    return NULL;
+    }
     novo->codigo=codigo;
     strncpy(novo->descricao, descricao, 64);
     novo->preco=preco;
@@ -225,6 +229,7 @@ produto* criarProduto(int codigo, const char* descricao, float preco){
 }
 
 void inserirProduto(produto** lista, produto* novo){
+    if(novo==NULL || lista==NULL) return;
     novo->prox=*lista;
     *lista=novo;
 }
@@ -556,6 +561,10 @@ void carregarDados(produto** lista_produtos, filial** lista_filiais, carrinho **
 
     if (!PRODUTOS || !FILIAIS || !ESTOQUES || !CARRINHO) {
         printf("Erro ao abrir um ou mais arquivos.\n");
+        if (PRODUTOS) fclose(PRODUTOS);
+        if (FILIAIS) fclose(FILIAIS);
+        if (ESTOQUES) fclose(ESTOQUES);
+        if (CARRINHO) fclose(CARRINHO);
         return;
     }
 
@@ -663,11 +672,12 @@ void verificarDisponibilidade(carrinho* c, filial* f) {
     printf("\nDisponibilidade\n");
 
     filial* filial_atual = f;
+    int qualquer_filial_ok = 0;
 
     while (filial_atual != NULL) { //primeiro loop que percorre as filiais
         printf("Verificando Filial: %s (ID: %d)...\n", filial_atual->nome, filial_atual->id_filial);
         int itens_faltantes = 0;
-        int itens_totais=0;
+        int itens_totais = 0;
         itemCarrinho* itemC = c->itens;
 
         while (itemC != NULL) { //loop que percorre os itens do carrinho
@@ -693,16 +703,21 @@ void verificarDisponibilidade(carrinho* c, filial* f) {
         }
         if (itens_faltantes == 0) {
             printf("A filial possui todos os produtos\n");
-        } else if(itens_faltantes==itens_totais){
-            printf("Nenhuma filial está apta para realizar a compra");
-        }
-        else {
+            qualquer_filial_ok = 1; // encontrou uma filial que atende ao carrinho
+        } else if (itens_faltantes == itens_totais) {
+            printf("Esta filial nao possui nenhum dos itens desejados.\n");
+        } else {
             printf("Falta(m) %d item(ns).\n", itens_faltantes);
         }
         printf("\n");
 
         filial_atual = filial_atual->prox; //vai para a próxima filial
     }
+    // se nenhuma filial atendeu completamente ao pedido
+    if (!qualquer_filial_ok) {
+        printf("Nenhuma filial está apta para realizar a compra.\n");
+    }
+
     return;
 }
 
@@ -824,8 +839,8 @@ void desalocarListaCarrinhos(carrinho** lista) {
         return;
     }
 
-    carrinho* head = (*lista)->prox;
-    carrinho* atual = head;
+    carrinho* cabeca = (*lista)->prox;
+    carrinho* atual = cabeca;
     carrinho* temp;
 
     // quebra a ligação circular
