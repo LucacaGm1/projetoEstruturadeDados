@@ -36,6 +36,7 @@ typedef struct carrinho{
 }carrinho;
 
 //--------------------------------------------------------------------------------//
+
 produto* criarProduto(int codigo, const char* descricao, float preco);//
 void inserirProduto(produto** lista, produto* novo);//
 void imprimirProdutos(produto* lista);//
@@ -62,14 +63,16 @@ void imprimirCarrinho(carrinho* c);//
 void desalocarCarrinho(carrinho* c);//
 void imprimirListaCarrinhos(carrinho* lista);//
 
-int verificarDisponibilidade(carrinho* c, filial* f);//
-
-void desalocarPonteiro(void **p);//
-
+void verificarDisponibilidade(carrinho* c, filial* f);//
+void abaterEstoque(carrinho* c, filial* f);//
 void carregarDados(produto** lista_produtos, filial** lista_filiais, carrinho **carrinho_cliente);//
 
 void buscarItemEstoquePorCodigo(filial* lista_filiais, int codigo_produto, int quantidade_desejada);//
 void buscarItemEstoquePorDescricao(filial* lista_filiais, produto* lista_produtos, const char* descricao, int quantidade_desejada);//
+
+void desalocarPonteiro(void **p);//
+
+//--------------------------------------------------------------------------------//
 
 int main(){
     carrinho* carrinhos_clientes=NULL;
@@ -87,6 +90,11 @@ int main(){
                 carregarDados(&produtos, &filiais, &carrinhos_clientes);
             break;
             case 2:
+                if (carrinhos_clientes==NULL || filiais==NULL || produtos==NULL){
+                        printf("Dados nao foram carregados, tente novamente.\n");
+                        break;
+                }
+
                 int subopcao=-1;
                 printf("Gostaria de buscar por codigo-1 ou descricao-2?\n");
                 scanf("%d",&subopcao);
@@ -109,10 +117,10 @@ int main(){
                         scanf("%d",&quantidade_desejada2);
                         buscarItemEstoquePorDescricao(filiais, produtos, descricao_produto, quantidade_desejada2);
                     break;
-                }
-            break;
+                    }
+                    break;
             case 3:
-                if (carrinhos_clientes==NULL || produtos==NULL || carrinhos_clientes->itens==NULL){
+                if (carrinhos_clientes==NULL){
                     printf("Carrinho vazio ou produtos nao carregados. Tente novamente.\n");
                     break;
                 }
@@ -166,10 +174,10 @@ int main(){
                 }
             break;
             case 4:
-            //buscar cada item do carrinho em cada uma das filiais e dizer quais têm disponibilidade de todos e quais não têm e o que falta, caso não tenha algum item//
+                verificarDisponibilidade(carrinhos_clientes, filiais);
             break;
             case 5:
-            //abater do estoque da filial escolhida//
+                abaterEstoque(carrinhos_clientes, filiais);
             break;
             case 6:
             //arquivos//
@@ -415,7 +423,6 @@ void inserirCarrinho(carrinho **lista, carrinho *novo){
     }
 }
 
-
 void imprimirListaCarrinhos(carrinho* lista) {
     if (!lista) {
         printf("Nenhum carrinho registrado.\n");
@@ -434,7 +441,7 @@ void imprimirListaCarrinhos(carrinho* lista) {
             printf("  (Carrinho vazio)\n");
         } else {
             while (item) {
-                printf("  Produto: %d | Quantidade: %d | Preço unitário: R$ %.2f\n",
+                printf("  Produto: %d | Quantidade: %d | Preco unitario: R$ %.2f\n",
                        item->codigo_produto, item->qtd, item->preco_unit);
                 item = item->prox;
             }
@@ -443,12 +450,6 @@ void imprimirListaCarrinhos(carrinho* lista) {
         atual = atual->prox;
     } while (atual != lista->prox); // volta ao primeiro carrinho
 }
-
-
-
-
-
-
 
 void desalocarPonteiro(void **p){
     free(*p);
@@ -473,7 +474,7 @@ void buscarItemEstoquePorCodigo(filial* lista_filiais, int codigo_produto, int q
     }
 
     if (encontrado==0) {
-        printf("Produto nao disponivel na quantidade desejada em nenhuma filial.\n");
+        printf("Produto nao existe ou nao este disponivel na quantidade desejada em nenhuma filial.\n");
     }
 }
 
@@ -506,7 +507,7 @@ void buscarItemEstoquePorDescricao(filial* lista_filiais, produto* lista_produto
             if (item->codigo_produto == codigo_produto && item->quantidade >= quantidade_desejada) {
                 printf("Produto disponivel na filial %s:\n", f->nome);
                 printf("Codigo: %d | Descricao: %s | Preco: %.2f | Quantidade: %d\n",
-                       codigo_produto, descricao, preco, item->quantidade);
+                codigo_produto, descricao, preco, item->quantidade);
                 encontrado = 1;
             }
             item = item->prox;
@@ -518,7 +519,6 @@ void buscarItemEstoquePorDescricao(filial* lista_filiais, produto* lista_produto
         printf("Produto '%s' nao disponivel na quantidade desejada em nenhuma filial.\n", descricao);
     }
 }
-
 
 
 void carregarDados(produto** lista_produtos, filial** lista_filiais, carrinho **carrinho_cliente) {
@@ -599,7 +599,14 @@ void carregarDados(produto** lista_produtos, filial** lista_filiais, carrinho **
                 itemCarrinho* novo = criarItemCarrinho(cod_produto, qtd, p->preco);
                 inserirItemCarrinho(atual, novo);
             }
-        } else if (strcmp(comando, "FIM") == 0) {
+        } /*else if (strcmp(comando, "VERIFICAR_ATENDIMENTO") == 0) {
+            if (atual != NULL) {
+                verificarDisponibilidade(atual, *lista_filiais);
+            }
+        } else if (strcmp(comando, "FINALIZAR") == 0) {
+            int id_filial_destino;
+            sscanf(linha_c, "%*s %d", &id_filial_destino);
+        } */else if (strcmp(comando, "FIM") == 0) {
             atual = NULL;
             id_carrinho = -1;
         }
@@ -613,3 +620,172 @@ void carregarDados(produto** lista_produtos, filial** lista_filiais, carrinho **
     printf("Dados carregados com sucesso!\n");
 }
 
+
+void verificarDisponibilidade(carrinho* c, filial* f) {
+    if (c == NULL || c->itens == NULL) { //verifição
+        printf("O carrinho esta vazio ou nao esta registrado.\n");
+        return;
+    }
+    if (f == NULL) { //verificação
+        printf("Nenhuma filial registrada.\n");
+        return;
+    }
+
+    printf("\nDisponibilidade\n");
+
+    filial* filial_atual = f;
+
+    while (filial_atual != NULL) { //primeiro loop que percorre as filiais
+        printf("Verificando Filial: %s (ID: %d)...\n", filial_atual->nome, filial_atual->id_filial);
+        int itens_faltantes = 0;
+        int itens_totais=0;
+        itemCarrinho* itemC = c->itens;
+
+        while (itemC != NULL) { //loop que percorre os itens do carrinho
+            itemEstoque* itemEstoque = filial_atual->estoque;
+            int estoque = 0;
+            int achou = 0;
+
+            while (itemEstoque != NULL) { //loop que percorre estoque das fliais
+                if (itemEstoque->codigo_produto == itemC->codigo_produto) {
+                    estoque = itemEstoque->quantidade;
+                    achou = 1; //se encontrou, da um break e volta para o loop dos itens dos carrinhos, se não, continua procurando no estoque
+                    break;
+                }
+                itemEstoque = itemEstoque->prox;
+            }
+            if (!achou || estoque < itemC->qtd) { //se saiu do loop do estoque e não encontrou o item ou a quantidade em estoque é menor que o item escolhido, mostra o
+                                                  //item que fala, a quantidade e soma no contador de itens faltantes
+                printf("Indisponivel: Produto %d.(Precisa: %d, Tem: %d)\n", itemC->codigo_produto, itemC->qtd, estoque);
+                itens_faltantes++;
+            }
+            itens_totais++;
+            itemC = itemC->prox;
+        }
+        if (itens_faltantes == 0) {
+            printf("A filial possui todos os produtos\n");
+        } else if(itens_faltantes==itens_totais){
+            printf("Nenhuma filial está apta para realizar a compra");
+        }
+        else {
+            printf("Falta(m) %d item(ns).\n", itens_faltantes);
+        }
+        printf("\n");
+
+        filial_atual = filial_atual->prox; //vai para a próxima filial
+    }
+    return;
+}
+
+void abaterEstoque(carrinho* c, filial* f){
+    if (c == NULL || c->itens == NULL) { //verificação
+        printf("O carrinho esta vazio ou nao existe.\n");
+        return;
+    }
+    if (f == NULL) { //verificação
+        printf("Nenhuma filial registrada.\n");
+        return;
+    }
+
+    int id_filial_escolhida;
+    printf("Digite o ID da filial para finalizar a compra: ");
+    scanf("%d", &id_filial_escolhida);
+
+    filial* f_escolhida = f;
+    while (f_escolhida != NULL && f_escolhida->id_filial != id_filial_escolhida) {
+        f_escolhida = f_escolhida->prox; //se não é a primeira filial percorre
+    }
+
+    if (f_escolhida == NULL) { //se não encontra a filial retorna
+        printf("Filial com ID %d nao encontrada.\n", id_filial_escolhida);
+        return;
+    }
+
+    printf("\nProcessando compra na filial: %s\n", f_escolhida->nome);
+
+    itemCarrinho* atual = c->itens;
+    itemCarrinho* anterior = NULL;
+    int houve_ajuste = 0; //conta quantos itens foram ajustados
+
+    while (atual != NULL) {
+        itemEstoque* est = f_escolhida->estoque; //ponteiro para o estoque da filial escolhida
+        int qtd_estoque = 0; //guarda a quantidade dos itens se existirem no estoque
+
+        while (est != NULL) {
+            if (est->codigo_produto == atual->codigo_produto) { //se o item existir no estoque
+                qtd_estoque = est->quantidade; //guarda a quantidade em estoque
+                break; //sai do while
+            }
+            est = est->prox;
+        }
+
+        if (qtd_estoque < atual->qtd) { //se a quantidade do estoque for menor
+            houve_ajuste = 1;
+            printf("Ajuste no produto %d: Pedido %d -> Disponivel %d\n", atual->codigo_produto, atual->qtd, qtd_estoque);
+            atual->qtd = qtd_estoque; //ajusta o carrinho para ter aquantidade disponivel na filial
+        }
+
+        if (atual->qtd == 0) { //se a quantidade é 0 remove o item do carrinho
+            printf("Produto %d removido do carrinho (Sem estoque).\n", atual->codigo_produto);
+
+            itemCarrinho* temp = atual;
+
+            if (anterior == NULL) {
+                c->itens = atual->prox; // era o primeiro da lista
+                atual = c->itens;
+            }
+            else {
+                anterior->prox = atual->prox; // era um item do meio/fim
+                atual = anterior->prox;
+            }
+            free(temp); // libera memória do item removido
+        }
+        else { //se for maior ou igual continua percorrendo
+            anterior = atual;
+            atual = atual->prox;
+        }
+    }
+
+    if (c->itens == NULL) { //se a filial não tiver nenhum dos itens
+        c->total = 0.0;
+        printf("\nCOMPRA CANCELADA\n");
+        printf("A filial escolhida nao possui nenhum dos itens desejados.\n");
+        return;
+    }
+
+    float novo_total = 0.0;
+    itemCarrinho* aux = c->itens;
+    while (aux != NULL) { //se tiver pelo menos um altera o valor do carrinho principal
+        novo_total += aux->qtd * aux->preco_unit;
+        aux = aux->prox;
+    }
+    c->total = novo_total;
+
+    if (houve_ajuste) {
+        printf("\nO carrinho foi ajustado automaticamente conforme o estoque.\n");
+        printf("Novo Total: %.2f\n", c->total);
+        printf("Deseja confirmar a compra com esses itens? (1-Sim / 0-Nao): ");
+        int confirma;
+        scanf("%d", &confirma);
+        if (confirma != 1) {
+            printf("Compra cancelada pelo usuario.\n");
+            return;
+        }
+    }
+
+    atual = c->itens; //se o usuário confirmar compra faz o abate no estoque atual
+    while (atual != NULL) {
+        itemEstoque* est = f_escolhida->estoque;
+        while (est != NULL) {
+            if (est->codigo_produto == atual->codigo_produto) {
+                est->quantidade -= atual->qtd;
+                break;
+            }
+            est = est->prox;
+        }
+        atual = atual->prox;
+    }
+
+    printf("\nVENDA CONFIRMADA COM SUCESSO!\n");
+    printf("Estoque da filial %s atualizado.\n", f_escolhida->nome);
+}
