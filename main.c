@@ -121,8 +121,8 @@ int main(){
                     }
                     break;
             case 3:
-                if (carrinhos_clientes==NULL){
-                    printf("Carrinho vazio ou produtos nao carregados. Tente novamente.\n");
+                if (produtos==NULL){
+                    printf("Produtos nao carregados. Tente novamente.\n");
                     break;
                 }
                 imprimirCarrinho(carrinhos_clientes);
