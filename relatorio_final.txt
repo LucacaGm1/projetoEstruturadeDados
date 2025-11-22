@@ -12,11 +12,10 @@ RELATORIO GERAL DE CARRINHOS E DIAGNOSTICO
     - Prod: 2301 | Qtd: 10 | R$ 29.90
     TOTAL: R$ 538.40
 -----------------------------------------------------
->>> CARRINHO 3 [STATUS: CANCELADO / ABANDONADO]
+>>> CARRINHO 3 [STATUS: FINALIZADO na Filial ID 101]
     - Prod: 5001 | Qtd: 1 | R$ 7.50
-    - Prod: 2003 | Qtd: 2 | R$ 14.20
     - Prod: 2002 | Qtd: 3 | R$ 18.50
-    TOTAL: R$ 91.40
+    TOTAL: R$ 63.00
 -----------------------------------------------------
 
 
@@ -92,7 +91,7 @@ FILIAL: Uvaranas Ponta Grossa (ID: 102)
 FILIAL: Centro Ponta Grossa (ID: 101)
   CODIGO | DESCRICAO                     | QTD | PRECO UNIT
   6001   | TermometroDigital             | 8   | R$ 29.00
-  5001   | SoroFisiologico500ml          | 56  | R$ 7.50
+  5001   | SoroFisiologico500ml          | 55  | R$ 7.50
   4001   | TesteCovid(5un)               | 5   | R$ 39.90
   3201   | PolivitamínicoAdulto         | 4   | R$ 34.90
   3001   | VitaminaC1g                   | 12  | R$ 22.00
@@ -100,6 +99,6 @@ FILIAL: Centro Ponta Grossa (ID: 101)
   2201   | Loratadina10mg                | 10  | R$ 16.30
   2101   | AAS100mg                      | 22  | R$ 9.70
   2003   | Paracetamol750mg              | 0   | R$ 14.20
-  2002   | Ibuprofeno400mg               | 18  | R$ 18.50
+  2002   | Ibuprofeno400mg               | 15  | R$ 18.50
   2001   | Dipirona500mg                 | 33  | R$ 12.90
 -----------------------------------------------------

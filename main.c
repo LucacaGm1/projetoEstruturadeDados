@@ -66,7 +66,7 @@ void desalocarListaCarrinhos(carrinho** lista);//
 void imprimirListaCarrinhos(carrinho* lista);//
 
 void verificarDisponibilidade(carrinho* c, filial* f);//
-void abaterEstoque(carrinho* c, filial* f, int id_filial_destino);//
+void abaterEstoque(carrinho* c, filial* f, int id_filial_destino, int modo_automatico);//
 void carregarDados(produto** lista_produtos, filial** lista_filiais, carrinho **carrinho_cliente);//
 
 void buscarItemEstoquePorCodigo(filial* lista_filiais, int codigo_produto, int quantidade_desejada);//
@@ -180,15 +180,16 @@ int main(){
                 verificarDisponibilidade(carrinhos_clientes, filiais);
             break;
             case 5:
-                if(carrinhos_clientes==NULL || filiais==NULL){
-                    printf("Carrinho vazio ou filiais nao carregadas. Tente novamente.\n");
-                    break;
-                }
+            if(carrinhos_clientes==NULL || filiais==NULL){
+                printf("Carrinho vazio ou filiais nao carregadas. Tente novamente.\n");
+                break;
+            }
                 int opcao_finalizar=-1;
                 printf("Escolha a filial para finalizar a compra:\n");
                 scanf("%d",&opcao_finalizar);
-                abaterEstoque(carrinhos_clientes, filiais, opcao_finalizar);
+                abaterEstoque(carrinhos_clientes, filiais, opcao_finalizar, 0);
             break;
+// ...
             case 6:
                 gerarRelatorioGeral(carrinhos_clientes, filiais, produtos);
             break;
@@ -649,11 +650,11 @@ void carregarDados(produto** lista_produtos, filial** lista_filiais, carrinho **
             if (atual != NULL) {
                 verificarDisponibilidade(atual, *lista_filiais);
             }
-        } else if (strcmp(comando, "FINALIZAR") == 0) { // <-- Modificação aqui
+        } else if (strcmp(comando, "FINALIZAR") == 0) {
             int id_filial_destino;
             sscanf(linha_c, "%*s %d", &id_filial_destino);
             if (atual != NULL) {
-                abaterEstoque(atual, *lista_filiais, id_filial_destino);
+                abaterEstoque(atual, *lista_filiais, id_filial_destino, 1); 
             }
         } else if (strcmp(comando, "FIM") == 0) {
             if (atual != NULL) {
@@ -737,7 +738,7 @@ void verificarDisponibilidade(carrinho* c, filial* f) {
     return;
 }
 
-void abaterEstoque(carrinho* c, filial* f, int id_filial_destino) {
+void abaterEstoque(carrinho* c, filial* f, int id_filial_destino, int modo_automatico) {
 
     if (c == NULL || c->itens == NULL) { //verificação
         printf("O carrinho esta vazio ou nao existe.\n");
@@ -823,16 +824,21 @@ void abaterEstoque(carrinho* c, filial* f, int id_filial_destino) {
     if (houve_ajuste) {
         printf("\nO carrinho foi ajustado automaticamente conforme o estoque.\n");
         printf("Novo Total: %.2f\n", c->total);
-        printf("Deseja confirmar a compra com esses itens? (1-Sim / 0-Nao): ");
-        int confirma;
-        scanf("%d", &confirma);
-        if (confirma != 1) {
-            printf("Compra cancelada pelo usuario.\n");
-            return;
+
+        if (modo_automatico) {
+            printf("Compra automatica: CONFIRMADA APÓS AJUSTE.\n");
+        } else {
+            // case 5: pergunta ao usuário
+            printf("Deseja confirmar a compra com esses itens? (1-Sim / 0-Nao): ");
+            int confirma;
+            scanf("%d", &confirma);
+            if (confirma != 1) {
+                printf("Compra cancelada pelo usuario.\n");
+                return;
+            }
         }
     }
 
-    // Se a compra for confirmada, abater o estoque
     atual = c->itens;
     while (atual != NULL) {
         itemEstoque* est = f_escolhida->estoque;
@@ -847,7 +853,7 @@ void abaterEstoque(carrinho* c, filial* f, int id_filial_destino) {
     }
     c->id_filial_finalizada = id_filial_destino;
 
-    printf("\nVENDA CONFIRMADA COM SUCESSO!\n");
+    printf("\nVENDA CONCLUÍDA COM SUCESSO!\n");
     printf("Estoque da filial %s atualizado.\n", f_escolhida->nome);
 }
 
