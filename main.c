@@ -33,6 +33,7 @@ typedef struct carrinho{
     itemCarrinho *itens;
     float total;
     struct carrinho *prox;
+    int id_filial_finalizada;
 }carrinho;
 
 //--------------------------------------------------------------------------------//
@@ -71,6 +72,7 @@ void carregarDados(produto** lista_produtos, filial** lista_filiais, carrinho **
 void buscarItemEstoquePorCodigo(filial* lista_filiais, int codigo_produto, int quantidade_desejada);//
 void buscarItemEstoquePorDescricao(filial* lista_filiais, produto* lista_produtos, const char* descricao, int quantidade_desejada);//
 
+void gerarRelatorioGeral(carrinho* lista_carrinhos, filial* lista_filiais, produto* lista_produtos);//
 void desalocarPonteiro(void **p);//
 
 //--------------------------------------------------------------------------------//
@@ -188,27 +190,29 @@ int main(){
                 abaterEstoque(carrinhos_clientes, filiais, opcao_finalizar);
             break;
             case 6:
-            //arquivos//
+                gerarRelatorioGeral(carrinhos_clientes, filiais, produtos);
             break;
         }
     }
+    printf("\nGerando relatorio final antes de sair...\n");
+    gerarRelatorioGeral(carrinhos_clientes, filiais, produtos);
     imprimirFiliais(filiais);
     imprimirCarrinho(carrinhos_clientes);
     imprimirProdutos(produtos);
     imprimirListaCarrinhos(carrinhos_clientes);
-    
+
     printf("\n--- Desalocando Memoria ---\n");
     desalocarProdutos(&produtos);
     desalocarFiliais(&filiais);
     desalocarListaCarrinhos(&carrinhos_clientes);
-    
+
     // verifica se tudo foi desalocado
     if (produtos == NULL && filiais == NULL && carrinhos_clientes == NULL) {
         printf("Toda a memoria alocada foi desalocada com sucesso.\n");
     } else {
         printf("AVISO: Algumas listas nao foram completamente desalocadas.\n");
     }
-    
+
     printf("saindo...\n");
     return 0;
 }
@@ -432,6 +436,7 @@ carrinho* criarCarrinho(itemCarrinho* itens) {
     novo->itens = itens;
     novo->total = 0.0;
     novo->prox = NULL;
+    novo->id_filial_finalizada = -1;
 
     itemCarrinho* atual = itens;
     while (atual) {
@@ -635,6 +640,11 @@ void carregarDados(produto** lista_produtos, filial** lista_filiais, carrinho **
                 itemCarrinho* novo = criarItemCarrinho(cod_produto, qtd, p->preco);
                 inserirItemCarrinho(atual, novo);
             }
+        } else if (strcmp(comando, "REMOVE") == 0) {
+            sscanf(linha_c, "%*s %d %d", &cod_produto, &qtd);
+            if (atual != NULL) {
+                removerItemCarrinho(atual, cod_produto, qtd);
+            }
         } else if (strcmp(comando, "VERIFICAR_ATENDIMENTO") == 0) { // <-- Modificação aqui
             if (atual != NULL) {
                 verificarDisponibilidade(atual, *lista_filiais);
@@ -646,6 +656,12 @@ void carregarDados(produto** lista_produtos, filial** lista_filiais, carrinho **
                 abaterEstoque(atual, *lista_filiais, id_filial_destino);
             }
         } else if (strcmp(comando, "FIM") == 0) {
+            if (atual != NULL) {
+                if (atual->id_filial_finalizada == -1) {
+                    atual->id_filial_finalizada = -2; // Código para CANCELADO
+                }
+            }
+
             atual = NULL;
             id_carrinho = -1;
         }
@@ -715,7 +731,7 @@ void verificarDisponibilidade(carrinho* c, filial* f) {
     }
     // se nenhuma filial atendeu completamente ao pedido
     if (!qualquer_filial_ok) {
-        printf("Nenhuma filial está apta para realizar a compra.\n");
+        printf("Nenhuma filial esta apta para realizar a compra.\n");
     }
 
     return;
@@ -731,7 +747,7 @@ void abaterEstoque(carrinho* c, filial* f, int id_filial_destino) {
         printf("Nenhuma filial registrada.\n");
         return;
     }
-    
+
     filial* f_escolhida = f;
     while (f_escolhida != NULL && f_escolhida->id_filial != id_filial_destino) { // Usando o novo parâmetro
         f_escolhida = f_escolhida->prox; //se não é a primeira filial percorre
@@ -829,6 +845,7 @@ void abaterEstoque(carrinho* c, filial* f, int id_filial_destino) {
         }
         atual = atual->prox;
     }
+    c->id_filial_finalizada = id_filial_destino;
 
     printf("\nVENDA CONFIRMADA COM SUCESSO!\n");
     printf("Estoque da filial %s atualizado.\n", f_escolhida->nome);
@@ -844,15 +861,149 @@ void desalocarListaCarrinhos(carrinho** lista) {
     carrinho* temp;
 
     // quebra a ligação circular
-    (*lista)->prox = NULL; 
-    
+    (*lista)->prox = NULL;
+
     // percorre a lista
     while (atual != NULL) {
         temp = atual;
         atual = atual->prox;
-        desalocarCarrinho(temp); 
+        desalocarCarrinho(temp);
         free(temp);
     }
 
     *lista = NULL;
+}
+
+void gerarRelatorioGeral(carrinho* lista_carrinhos, filial* lista_filiais, produto* lista_produtos) {
+    FILE *arq = fopen("relatorio_final.txt", "w"); // "w" para limpar o arquivo antigo e criar um novo
+    if (!arq) {
+        printf("Erro ao abrir arquivo de relatorio.\n");
+        return;
+    }
+
+    // ==========================================
+    // PARTE 1: RELATORIO DE CARRINHOS
+    // ==========================================
+    fprintf(arq, "=====================================================\n");
+    fprintf(arq, "RELATORIO GERAL DE CARRINHOS E DIAGNOSTICO\n");
+    fprintf(arq, "=====================================================\n");
+
+    if (lista_carrinhos == NULL) {
+        fprintf(arq, "Nenhum carrinho na memoria.\n");
+    } else {
+        carrinho *primeiro = lista_carrinhos->prox;
+        if (primeiro == NULL) primeiro = lista_carrinhos;
+
+        carrinho *atual = primeiro;
+        int contador = 1;
+
+        do {
+            fprintf(arq, ">>> CARRINHO %d ", contador++);
+
+            if (atual->id_filial_finalizada > 0) {
+                fprintf(arq, "[STATUS: FINALIZADO na Filial ID %d]\n", atual->id_filial_finalizada);
+            }
+            else if (atual->id_filial_finalizada == -2) {
+                fprintf(arq, "[STATUS: CANCELADO / ABANDONADO]\n");
+            }
+            else {
+                fprintf(arq, "[STATUS: EM ABERTO]\n");
+            }
+
+            itemCarrinho *ic = atual->itens;
+            if (!ic) fprintf(arq, "    (Sem itens no momento)\n");
+
+            float total_carrinho = 0;
+            while (ic != NULL) {
+                fprintf(arq, "    - Prod: %d | Qtd: %d | R$ %.2f\n", ic->codigo_produto, ic->qtd, ic->preco_unit);
+                total_carrinho += (ic->qtd * ic->preco_unit);
+                ic = ic->prox;
+            }
+            fprintf(arq, "    TOTAL: R$ %.2f\n", total_carrinho);
+
+
+            if (atual->id_filial_finalizada == -1 && lista_filiais != NULL) {
+                fprintf(arq, "    --- Analise de Disponibilidade ---\n");
+                filial *f = lista_filiais;
+                int alguma_atende = 0;
+
+                while (f != NULL) {
+                    itemCarrinho *check = atual->itens;
+                    int faltas = 0;
+                    while (check != NULL) {
+                        itemEstoque *est = f->estoque;
+                        int tem = 0;
+                        while (est) {
+                            if (est->codigo_produto == check->codigo_produto) {
+                                tem = est->quantidade; break;
+                            }
+                            est = est->prox;
+                        }
+                        if (tem < check->qtd) faltas++;
+                        check = check->prox;
+                    }
+
+                    if (faltas == 0) {
+                        fprintf(arq, "    [V] Filial %s (ID %d): ATENDE COMPLETO\n", f->nome, f->id_filial);
+                        alguma_atende = 1;
+                    } else {
+                        fprintf(arq, "    [X] Filial %s (ID %d): Faltam itens\n", f->nome, f->id_filial);
+                    }
+                    f = f->prox;
+                }
+                if(!alguma_atende) fprintf(arq, "    >> Nenhuma filial atende o pedido completo.\n");
+            }
+
+            fprintf(arq, "-----------------------------------------------------\n");
+            atual = atual->prox;
+        } while (atual != NULL && atual != primeiro);
+    }
+    fprintf(arq, "\n\n");
+
+    // ==========================================
+    // PARTE 2: RELATORIO DE ESTOQUE
+    // ==========================================
+    fprintf(arq, "=====================================================\n");
+    fprintf(arq, "RELATORIO DE ESTOQUE POR FILIAL\n");
+    fprintf(arq, "=====================================================\n");
+
+    filial *f = lista_filiais;
+    if (f == NULL) {
+        fprintf(arq, "Nenhuma filial cadastrada.\n");
+    }
+
+    while (f != NULL) {
+        fprintf(arq, "FILIAL: %s (ID: %d)\n", f->nome, f->id_filial);
+
+        itemEstoque *ie = f->estoque;
+        if (ie == NULL) {
+            fprintf(arq, "  (Estoque Vazio)\n");
+        } else {
+            fprintf(arq, "  CODIGO | DESCRICAO                     | QTD | PRECO UNIT\n");
+            while (ie != NULL) {
+                char descricao[64] = "Produto nao cadastrado";
+                float preco = 0.0;
+
+                produto *p = lista_produtos;
+                while(p != NULL){
+                    if(p->codigo == ie->codigo_produto){
+                        strncpy(descricao, p->descricao, 64);
+                        preco = p->preco;
+                        break;
+                    }
+                    p = p->prox;
+                }
+
+                fprintf(arq, "  %-6d | %-29s | %-3d | R$ %.2f\n",
+                        ie->codigo_produto, descricao, ie->quantidade, preco);
+
+                ie = ie->prox;
+            }
+        }
+        fprintf(arq, "-----------------------------------------------------\n");
+        f = f->prox;
+    }
+
+    fclose(arq);
+    printf("Relatorio completo (Carrinhos + Estoque) gerado em 'relatorio_final.txt'.\n");
 }
