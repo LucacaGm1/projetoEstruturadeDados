@@ -1,7 +1,10 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
-
+// PROJETO ESTRUTURA DE DADOS 1
+// ANA FLAVIA CAMPOS FERREIRA
+// LUCAS LIMA ALEIXO DE BARROS
+// MURILLO KOSSOBUSKI
 typedef struct produto{
     int codigo;
     char descricao[64];
@@ -90,7 +93,13 @@ int main(){
         scanf("%d",&opcao);
         switch(opcao){
             case 1:
-                carregarDados(&produtos, &filiais, &carrinhos_clientes);
+                if (produtos != NULL || filiais != NULL || carrinhos_clientes != NULL) {
+                    printf("\n[AVISO] Os dados ja foram carregados anteriormente!\n");
+                    printf("Para evitar duplicacao ou erros, reinicie o programa se quiser recarregar.\n\n");
+                } else {
+                    carregarDados(&produtos, &filiais, &carrinhos_clientes);
+                    printf("\nDados carregados com sucesso!\n");
+                }
             break;
             case 2:
                 if (carrinhos_clientes==NULL || filiais==NULL || produtos==NULL){
@@ -654,7 +663,7 @@ void carregarDados(produto** lista_produtos, filial** lista_filiais, carrinho **
             int id_filial_destino;
             sscanf(linha_c, "%*s %d", &id_filial_destino);
             if (atual != NULL) {
-                abaterEstoque(atual, *lista_filiais, id_filial_destino, 1); 
+                abaterEstoque(atual, *lista_filiais, id_filial_destino, 1);
             }
         } else if (strcmp(comando, "FIM") == 0) {
             if (atual != NULL) {
